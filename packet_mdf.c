@@ -25,15 +25,16 @@ void show_help(char *str)
 
 char *file = NULL;
 int packet_num = 0;
+extern uint64_t error;
+pcap_info_t *p_i = NULL;
 int main(argc, argv)
     int argc;
     char *argv[];
 {
-    int i = 0;
+    uint64_t i = 0;
+    char buff[2048];
 	char  pcap_error[256] = {0} ;
-	struct pcap_pkthdr hdr;
-	pcap_t  *p = NULL ;
-    const unsigned char *pkt;
+    pcaprec_hdr_t pHdr;
 
     if (argc >= 2) {
         if (strcmp(argv[1], "help") == 0 ||
@@ -50,27 +51,36 @@ int main(argc, argv)
         file = argv[1];
     }
 
-    p = pcap_open_offline(file, pcap_error);
+    p_i = pktgen_pcap_open(file);
 
-	if(NULL == p) {
+	if(NULL == p_i) {
 		printf("pcap open error! ... %s\r\n",pcap_error) ;
 		return -1;
 	}
     //printf("cxxu len : %d.\n", __LINE__);
     i = 0;
-	while(1) {
-		pkt = pcap_next(p,&hdr);
-		if (NULL == pkt) {
-			break;
-        } else {
-            if (i == packet_num) {
-                printf(" packet len : %d.\n", hdr.caplen);
+    if (packet_num == 0) {
+        while(1) {
+            i++;
+            if (pktgen_pcap_chk(p_i, &pHdr, i) == 0)
                 break;
+        }
+    } else {
+        while(1) {
+            i++;
+            if (i == packet_num) {
+                //pktgen_pcap_read(p_i, &pHdr, buff, 2048, 1);
+                pktgen_pcap_chk(p_i, &pHdr, i);
+                printf(" packet len : %d.\n", pHdr.incl_len);
+                //print_content((uint8_t *)buff, pHdr.incl_len);
+                break;
+            } else {
+                pktgen_pcap_chk(p_i, &pHdr, i);
+                //pktgen_pcap_read(p_i, &pHdr, buff, 2048, 0);
             }
         }
-        i++;
     }
-    printf("cxxu packet num is : %d.\n", i);
-    pcap_close(p);
+    printf("cxxu packet num is : %lu, error: %lu.\n", i, error);
+    pktgen_pcap_close(p_i);
     return 0;
 }

@@ -114,7 +114,7 @@ void print_content(uint8_t * ptr, int length)
 size_t
 pktgen_pcap_read(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, char * pktBuff, uint32_t bufLen, int print)
 {
-    char buff[1024];
+    //char buff[1024];
 	size_t			len;
 	
 	len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
@@ -125,11 +125,51 @@ pktgen_pcap_read(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, char * pktBuff, uint3
 		return 0;
 	
 	len = fread(pktBuff, 1, pHdr->incl_len, pcap->fd);
+    /*
     if (print) {
         len = fread(buff, 1, 1024, pcap->fd);
         print_content((uint8_t *)buff, 1024);
     }
+    */
 	
 	return len;
 }
 
+typedef struct mac {
+    uint64_t dst : 48;
+    uint64_t src : 48;
+    uint64_t unuse : 32;
+} __attribute__((packed)) mac_t ;
+
+uint64_t error = 0ul;
+size_t
+pktgen_pcap_chk(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
+{
+	size_t			len;
+    mac_t m_mac;
+    int length = sizeof(mac_t);
+	
+	len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+	if ( len != sizeof(pcaprec_hdr_t))
+		return 0;
+	len = fread(&m_mac, 1, length, pcap->fd);
+	if ( len != length)
+		return 0;
+    if (m_mac.dst != 0x222222020000) {
+        //printf("length: %d, dst mac: 0x%012lx, src mac: 0x%012lx.\n", length, m_mac.dst, m_mac.src);
+        //printf("error! %lu\n", i);
+        error++;
+        fseek(pcap->fd, -length, SEEK_CUR);
+        len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        if ( len != length)
+            return 0;
+    } else {
+        //len = fread(pktBuff, 1, pHdr->incl_len, pcap->fd);
+        fseek(pcap->fd, -length, SEEK_CUR);
+    }
+    len = fseek(pcap->fd, pHdr->incl_len, SEEK_CUR);
+    if ( len < 0)
+        return 0;
+
+	return pHdr->incl_len;
+}

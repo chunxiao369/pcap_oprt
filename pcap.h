@@ -38,4 +38,5 @@ extern size_t pktgen_pcap_read(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, char * 
 extern int pktgen_payloadOffset(const unsigned char *pkt_data, unsigned int *offset,
                           unsigned int *length);
 extern void print_content(uint8_t * ptr, int length);
+extern size_t pktgen_pcap_chk(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i);
 #endif /* PCAP_H_ */

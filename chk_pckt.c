@@ -15,7 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include "pcap.h"
+#include <pcap.h>
 
 void show_help(char *str)
 {
@@ -23,17 +23,28 @@ void show_help(char *str)
     printf("\n");
 }
 
+void print_content(uint8_t * ptr, int length)
+{
+    int i;
+    for (i = 0; i < length; i++) {
+        if (i % 16 == 0)
+            printf("\n");
+        printf("%02x ", ptr[i]);
+    }
+    printf("\n");
+}
+
 char *file = NULL;
 int packet_num = 0;
-pcap_info_t *p_i = NULL;
 int main(argc, argv)
     int argc;
     char *argv[];
 {
     int i = 0;
-    char buff[2048];
 	char  pcap_error[256] = {0} ;
-    pcaprec_hdr_t pHdr;
+	struct pcap_pkthdr hdr;
+	pcap_t  *p = NULL ;
+    const unsigned char *pkt;
 
     if (argc >= 2) {
         if (strcmp(argv[1], "help") == 0 ||
@@ -50,9 +61,9 @@ int main(argc, argv)
         file = argv[1];
     }
 
-    p_i = pktgen_pcap_open(file);
+    p = pcap_open_offline(file, pcap_error);
 
-	if(NULL == p_i) {
+	if(NULL == p) {
 		printf("pcap open error! ... %s\r\n",pcap_error) ;
 		return -1;
 	}
@@ -60,16 +71,18 @@ int main(argc, argv)
     i = 0;
 	while(1) {
         i++;
-        if (i == packet_num) {
-            pktgen_pcap_read(p_i, &pHdr, buff, 2048, 1);
-            printf(" packet len : %d.\n", pHdr.incl_len);
-            print_content((uint8_t *)buff, pHdr.incl_len);
-            break;
+		pkt = pcap_next(p,&hdr);
+		if (NULL == pkt) {
+			break;
         } else {
-            pktgen_pcap_read(p_i, &pHdr, buff, 2048, 0);
+            if (i == packet_num) {
+                printf(" packet len : %d.\n", hdr.caplen);
+                print_content((uint8_t *)pkt, hdr.caplen);
+                break;
+            }
         }
     }
     printf("cxxu packet num is : %d.\n", i);
-    pktgen_pcap_close(p_i);
+    pcap_close(p);
     return 0;
 }
