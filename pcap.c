@@ -36,7 +36,7 @@ pktgen_pcap_open(char * filename)
 		goto leave;
 	}
 	
-	fd = fopen((const char *)filename, "r");
+	fd = fopen((const char *)filename, "r+");
 	if ( fd == NULL )
 		goto leave;
 	
@@ -170,6 +170,97 @@ pktgen_pcap_chk(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
     len = fseek(pcap->fd, pHdr->incl_len, SEEK_CUR);
     if ( len < 0)
         return 0;
+
+	return pHdr->incl_len;
+}
+
+size_t pktgen_pcap_mdf0(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
+{
+	size_t			len;
+    mac_t m_mac;
+    int length = sizeof(mac_t);
+	
+	len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+	if ( len != sizeof(pcaprec_hdr_t))
+		return 0;
+	len = fread(&m_mac, 1, length, pcap->fd);
+	if ( len != length)
+		return 0;
+    if (m_mac.dst != 0x222222020000) {
+        //printf("length: %d, dst mac: 0x%012lx, src mac: 0x%012lx.\n", length, m_mac.dst, m_mac.src);
+        //printf("error! %lu\n", i);
+        error++;
+        // find first pcap hdr
+        fseek(pcap->fd, -length, SEEK_CUR);
+        fseek(pcap->fd, -length, SEEK_CUR);
+        // wirte incl_len 0 to pcap hdr
+        pHdr->incl_len = 0;
+        pHdr->orig_len = 0;
+        fwrite(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        // read send pcap hdr
+        len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        if ( len != length)
+            return 0;
+    } else {
+        //len = fread(pktBuff, 1, pHdr->incl_len, pcap->fd);
+        fseek(pcap->fd, -length, SEEK_CUR);
+    }
+    len = fseek(pcap->fd, pHdr->incl_len, SEEK_CUR);
+    if ( len < 0)
+        return 0;
+
+	return pHdr->incl_len;
+}
+
+static uint32_t last_len = 0;
+size_t pktgen_pcap_mdf1(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
+{
+	size_t			len;
+    mac_t m_mac;
+    int length = sizeof(mac_t);
+    long tmp;
+	
+	len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+	if ( len != sizeof(pcaprec_hdr_t))
+		return 0;
+	len = fread(&m_mac, 1, length, pcap->fd);
+	if ( len != length)
+		return 0;
+    if (m_mac.dst != 0x222222020000) {
+        //printf("length: %d, dst mac: 0x%012lx, src mac: 0x%012lx.\n", length, m_mac.dst, m_mac.src);
+        //printf("error! %lu\n", i);
+        error++;
+        // find last pcap hdr
+        tmp = (long)last_len;
+        fseek(pcap->fd, -length, SEEK_CUR);
+        fseek(pcap->fd, -length, SEEK_CUR);
+        fseek(pcap->fd, -tmp, SEEK_CUR);
+        fseek(pcap->fd, -length, SEEK_CUR);
+        // set  last pcap hdr + hdr_len
+        fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        pHdr->incl_len += 16;
+        pHdr->orig_len += 16;
+        fseek(pcap->fd, -length, SEEK_CUR);
+        fwrite(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        // find first pcap hdr
+        fseek(pcap->fd, tmp, SEEK_CUR);
+        pHdr->incl_len = 0;
+        pHdr->orig_len = 0;
+        pHdr->ts_sec   = 0; 
+        pHdr->ts_usec  = 0;
+        fwrite(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        // read send pcap hdr
+        len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        if ( len != length)
+            return 0;
+    } else {
+        //len = fread(pktBuff, 1, pHdr->incl_len, pcap->fd);
+        fseek(pcap->fd, -length, SEEK_CUR);
+    }
+    len = fseek(pcap->fd, pHdr->incl_len, SEEK_CUR);
+    if ( len < 0)
+        return 0;
+    last_len = pHdr->incl_len;
 
 	return pHdr->incl_len;
 }

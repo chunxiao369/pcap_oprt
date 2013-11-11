@@ -62,7 +62,9 @@ int main(argc, argv)
     if (packet_num == 0) {
         while(1) {
             i++;
-            if (pktgen_pcap_chk(p_i, &pHdr, i) == 0)
+            //if (pktgen_pcap_chk(p_i, &pHdr, i) == 0)
+            //if (pktgen_pcap_mdf0(p_i, &pHdr, i) == 0)
+            if (pktgen_pcap_mdf1(p_i, &pHdr, i) == 0)
                 break;
         }
     } else {
