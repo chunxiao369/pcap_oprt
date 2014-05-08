@@ -230,6 +230,8 @@ size_t pktgen_pcap_mdf1(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
         //printf("length: %d, dst mac: 0x%012lx, src mac: 0x%012lx.\n", length, m_mac.dst, m_mac.src);
         //printf("error! %lu\n", i);
         error++;
+        if (error % 10000 == 0)
+            printf("error! %lu,  %lu\n", error, i);
         // find last pcap hdr
         tmp = (long)last_len;
         fseek(pcap->fd, -length, SEEK_CUR);

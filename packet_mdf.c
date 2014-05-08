@@ -19,11 +19,13 @@
 
 void show_help(char *str)
 {
-    printf("%s pcap_file num\n", str);
+    printf("%s -c pcap_file num\n", str);
+    printf("%s -n pcap_file pcap_file2\n", str);
     printf("\n");
 }
 
 char *file = NULL;
+char *file2 = NULL;
 int packet_num = 0;
 extern uint64_t error;
 pcap_info_t *p_i = NULL;
@@ -43,12 +45,18 @@ int main(argc, argv)
             show_help(argv[0]);
             return 0;
         }
-        if (argc < 3) {
+        if (argc < 4) {
             show_help(argv[0]);
             return 0;
         }
-        packet_num = atoi(argv[2]);
-        file = argv[1];
+
+        if (strcmp(argv[1], "-c") == 0) {
+            file = argv[2];
+            packet_num = atoi(argv[3]);
+        } else if (strcmp(argv[1], "-n") == 0) {
+            file = argv[2];
+            file2 = argv[3];
+        }
     }
 
     p_i = pktgen_pcap_open(file);
@@ -57,6 +65,9 @@ int main(argc, argv)
 		printf("pcap open error! ... %s\r\n",pcap_error) ;
 		return -1;
 	}
+    if (file2 != NULL) {
+        return 0;
+    }
     //printf("cxxu len : %d.\n", __LINE__);
     i = 0;
     if (packet_num == 0) {
