@@ -174,42 +174,42 @@ pktgen_pcap_chk(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
 	return pHdr->incl_len;
 }
 
-size_t pktgen_pcap_mdf0(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i)
+const char mac_add[14] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,\
+                      0x00, 0x05, 0x04, 0x03, 0x02, 0x01,\
+                      0x08, 0x00};
+size_t pktgen_pcap_mdf0(pcap_info_t * pcap, char *new_file)
 {
-	size_t			len;
-    mac_t m_mac;
-    int length = sizeof(mac_t);
-	
-	len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
-	if ( len != sizeof(pcaprec_hdr_t))
-		return 0;
-	len = fread(&m_mac, 1, length, pcap->fd);
-	if ( len != length)
-		return 0;
-    if (m_mac.dst != 0x222222020000) {
-        //printf("length: %d, dst mac: 0x%012lx, src mac: 0x%012lx.\n", length, m_mac.dst, m_mac.src);
-        //printf("error! %lu\n", i);
-        error++;
-        // find first pcap hdr
-        fseek(pcap->fd, -length, SEEK_CUR);
-        fseek(pcap->fd, -length, SEEK_CUR);
-        // wirte incl_len 0 to pcap hdr
-        pHdr->incl_len = 0;
-        pHdr->orig_len = 0;
-        fwrite(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
-        // read send pcap hdr
-        len = fread(pHdr, 1, sizeof(pcaprec_hdr_t), pcap->fd);
-        if ( len != length)
-            return 0;
-    } else {
-        //len = fread(pktBuff, 1, pHdr->incl_len, pcap->fd);
-        fseek(pcap->fd, -length, SEEK_CUR);
-    }
-    len = fseek(pcap->fd, pHdr->incl_len, SEEK_CUR);
-    if ( len < 0)
-        return 0;
+	FILE *fd = 0;
+	size_t len = 0;
+	size_t tmp_len = 0;
+    size_t packet_num = 0;
+    pcaprec_hdr_t header;
+    char buff[2048] = {0};
 
-	return pHdr->incl_len;
+	fd = fopen((const char *)new_file, "w+");
+    /* write pcap header */
+    pcap->info.network = 1;
+    fwrite(&(pcap->info), 1, sizeof(pcap_hdr_t), fd);
+    while (1) {
+        /* packet header */
+        len = fread(&header, 1, sizeof(pcaprec_hdr_t), pcap->fd);
+        if ( len != sizeof(pcaprec_hdr_t))
+            break;
+        tmp_len = header.incl_len;
+        header.incl_len = tmp_len + 14; 
+        header.orig_len = tmp_len + 14;
+        fwrite(&header, 1, len, fd);
+        /* packet mac and ethertype */
+        fwrite(mac_add, 1, 14, fd);
+        /* packet content */
+        len = fread(buff, 1, tmp_len, pcap->fd);
+        if (len != tmp_len)
+            break;
+        fwrite(buff, 1, len, fd);
+        packet_num++;
+    }
+    fclose(fd);
+    return packet_num;
 }
 
 static uint32_t last_len = 0;

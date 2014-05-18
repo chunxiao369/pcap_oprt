@@ -24,9 +24,9 @@ typedef struct pcaprec_hdr_s {
 } pcaprec_hdr_t;
 
 typedef struct pcap_info_s {
+	pcap_hdr_t	info;
 	FILE	  * fd;
 	char 	  * filename;
-	pcap_hdr_t	info;
 } pcap_info_t;
 
 extern pcap_info_t * pktgen_pcap_open(char * filename);
@@ -39,6 +39,6 @@ extern int pktgen_payloadOffset(const unsigned char *pkt_data, unsigned int *off
                           unsigned int *length);
 extern void print_content(uint8_t * ptr, int length);
 extern size_t pktgen_pcap_chk(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i);
-extern size_t pktgen_pcap_mdf0(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i);
+extern size_t pktgen_pcap_mdf0(pcap_info_t * pcap, char *new_file);
 extern size_t pktgen_pcap_mdf1(pcap_info_t * pcap, pcaprec_hdr_t * pHdr, uint64_t i);
 #endif /* PCAP_H_ */

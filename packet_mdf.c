@@ -66,6 +66,8 @@ int main(argc, argv)
 		return -1;
 	}
     if (file2 != NULL) {
+        printf("change packet num: %u.\n", pktgen_pcap_mdf0(p_i, file2));
+        pktgen_pcap_close(p_i);
         return 0;
     }
     //printf("cxxu len : %d.\n", __LINE__);
